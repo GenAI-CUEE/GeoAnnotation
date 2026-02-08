@@ -1,0 +1,9 @@
+conda install pip
+conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia
+pip install fiona
+pip install -U segment-geospatial
+pip install segment-geospatial[samgeo2] 
+pip install geopandas
+pip install leafmap
+pip install ipysheet
+conda install -c conda-forge localtileserver rasterio gdal pyproj -y
