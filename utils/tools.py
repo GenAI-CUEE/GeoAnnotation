@@ -59,20 +59,30 @@ def get_raster_data(file_path):
     return image, dataset, [lons, lats], [rows, cols]
 
 
-def copy_meta_and_write_raster(source_tif, destination_tif):
-    with rasterio.open(source_tif) as src:
-        # 2. Get the metadata (including CRS, transform, dimensions, etc.)
-        # and create a copy of it
-        dst_kwargs = src.meta.copy()
-        dst_kwargs['dtype'] = 'uint8'  # Update data type if necessary
+def save_raster_and_write_meta(data, destination_tif, meta_source_tif):
+        
+    # Open the source GeoTIFF file in read mode ('r' is default)
+    with rasterio.open(meta_source_tif) as src:
+        # Read the raster data into a numpy array
+        image_array = src.read() # Read the first band (adjust for multi-band rasters)
 
-        # If you are writing a different NumPy array (e.g., of different data type or band count),
-        # you may need to update 'dtype' and 'count' in dst_kwargs
-        # dst_kwargs.update({'dtype': data_array.dtype, 'count': 1})
+        # Get a copy of the source file's metadata (profile)
+        profile = src.profile
 
-        # 3. Open the destination file in write mode
-        with rasterio.open(destination_tif, 'w', **dst_kwargs) as dst:
-            # 4. Write your data to the destination file
-            # This example writes the data from the source file (band 1)
-            # If using a new array, it would be: dst.write(data_array, 1)
-            dst.write(src.read(1), 1)
+        # Perform modifications on the numpy array
+        # Example: Change all pixel values below 10000 to a new value (e.g., 9999)
+        modified_array = data 
+
+    # Update the profile for the output file
+    # Ensure the dtype (data type) matches the modified array
+    profile.update(
+        dtype=modified_array.dtype,
+        count=data.shape[0], # Number of bands (1 in this example)
+        compress='lzw' # Optional: add compression
+    )
+
+    # Open the new GeoTIFF file in write mode ('w') and write the modified array
+    with rasterio.open(destination_tif, 'w', **profile) as dst:
+        dst.write(modified_array) # Write the modified array to band 1
+
+    print(f"Modified image saved to {destination_tif}")
