@@ -18,7 +18,9 @@ user@~/workspace$ pixi init geo
 user@~/workspace$ cd geo
 ```
 
-3. Intialize the pixi environment. 
+3. Configure pixi.toml by following the instruction from https://samgeo.gishub.org/installation/#3-configure-pixitoml and install the pixi environment. 
+
+
 
 ```
 user@~/workspace/geo$ pixi install 
