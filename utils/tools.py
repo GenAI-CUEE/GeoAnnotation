@@ -59,25 +59,23 @@ def get_raster_data(file_path):
     return image, dataset, [lons, lats], [rows, cols]
 
 
-def save_raster_and_write_meta(data, destination_tif, meta_source_tif):
-        
+def save_raster_and_write_meta(data, destination_tif, meta_source_tif=None):
+    modified_array = data
+
     # Open the source GeoTIFF file in read mode ('r' is default)
     with rasterio.open(meta_source_tif) as src:
-        # Read the raster data into a numpy array
-        image_array = src.read() # Read the first band (adjust for multi-band rasters)
-
+        # Read the raster data into a numpy array  
         # Get a copy of the source file's metadata (profile)
         profile = src.profile
 
         # Perform modifications on the numpy array
         # Example: Change all pixel values below 10000 to a new value (e.g., 9999)
-        modified_array = data 
 
     # Update the profile for the output file
     # Ensure the dtype (data type) matches the modified array
     profile.update(
-        dtype=modified_array.dtype,
-        count=data.shape[0], # Number of bands (1 in this example)
+        dtype=data.dtype,
+        count=data.shape[0], # Number of bands (1 in this example) 
         compress='lzw' # Optional: add compression
     )
 
