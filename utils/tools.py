@@ -11,6 +11,7 @@ import torchvision.transforms.functional as F
 from pyproj import Transformer
 from torchvision.ops import masks_to_boxes 
 from shapely.geometry import box
+from sklearn.metrics.pairwise import euclidean_distances
 
 
 
@@ -197,13 +198,13 @@ class Mask_Raster:
             print(f"Data shape: {image.shape}")
             print(f"Data type: {image.dtype}")
 
-        self.mask = image
+        self.mask = image[0, :, :]
         self.datainfo = datainfo
         
     def get_profile(self):
         return self.datainfo.profile
     
-    def convert_pixel_to_longlat(self, y, x, crs_dst="EPSG:4326"):
+    def get_longlat_from_image_pixels(self, y, x, crs_dst="EPSG:4326"):
         long, lat = self.datainfo.xy(y, x)
 
         if not(self.datainfo.crs.to_string() == crs_dst): 
@@ -261,11 +262,11 @@ class Mask_Raster:
         return pixel
     
 
-    def make_boundboxes(self, center_geojson, crs_dst="EPSG:4326"):
+    def make_boundboxes(self, center_geojson_file, crs_dst="EPSG:4326"):
  
         mask_uint8 = self.mask.astype(np.uint8)
 
-        center   = read_geojson(center_geojson)
+        center   = read_geojson(center_geojson_file)
         center["longitude"] = center.geometry.x
         center["latitude"]  = center.geometry.y
 
@@ -277,7 +278,7 @@ class Mask_Raster:
             pixel_y.append(pixel_xy[1])
 
         
-        tensor = torch.tensor(mask_uint8[0,:,:], dtype=torch.uint8)
+        tensor = torch.tensor(mask_uint8, dtype=torch.uint8)
         label_id = torch.unique(tensor)
         torch_masks_list = []
         for id in label_id.tolist(): 
@@ -289,7 +290,7 @@ class Mask_Raster:
 
         boxes_np =  boxes[1:,:].numpy().tolist()
 
-        # plt.imshow(mask_uint8[0,:,:], cmap='turbo')
+        # plt.imshow(mask_uint8, cmap='turbo')
         # plt.scatter(pixel_x, pixel_y, c='cyan', s=10)
         # Iterate through boxes and add patches 
 
@@ -298,13 +299,90 @@ class Mask_Raster:
         longlat_boxes = []
 
         for x_min, y_min, x_max, y_max in boxes_np_list:
-            lon_min, lat_min = self.convert_pixel_to_longlat(y_min, x_min, crs_dst=crs_dst)
-            lon_max, lat_max = self.convert_pixel_to_longlat(y_max, x_max, crs_dst=crs_dst)
+            lon_min, lat_min = self.get_longlat_from_image_pixels(y_min, x_min, crs_dst=crs_dst)
+            lon_max, lat_max = self.get_longlat_from_image_pixels(y_max, x_max, crs_dst=crs_dst)
 
             longlat_boxes.append([lon_min, lat_min, lon_max, lat_max]) 
 
         polygons = [box(minx, miny, maxx, maxy) for minx, miny, maxx, maxy in longlat_boxes]
 
         # 3. Create GeoDataFrame
-        gdf = gpd.GeoDataFrame(geometry=polygons, crs="EPSG:4326")
+        gdf = gpd.GeoDataFrame(geometry=polygons, crs=crs_dst) 
+        # gdf.to_file(destination_bbx_filename.geojson, driver='GeoJSON') 
+        return gdf
+
+
+    def mapping_geojson_center_to_mask_id(self, center_geojson_file, crs_dst="EPSG:4326"): 
+
+        center   = read_geojson(center_geojson_file)
+        center["longitude"] = center.geometry.x
+        center["latitude"]  = center.geometry.y
+
+        pixel_x = []
+        pixel_y = []
+        for long, lat in zip(center["longitude"].tolist(), center["latitude"].tolist()):
+            pixel_xy = self.get_image_pixels_from_longlat(long, lat, crs_dst=crs_dst)
+            pixel_x.append(pixel_xy[0])
+            pixel_y.append(pixel_xy[1])
+
+        self.center_pixel_x = pixel_x
+        self.center_pixel_y = pixel_y
         
+
+        self.mapping_gjcenter_id_to_mask_id = {}
+        self.mapping_mask_id_to_gjcenter_id = {}
+
+        gjcenter_index_list = []
+        for mask_index in range(0, self.mask.max()+1): 
+            gray_bf                = 1*(self.mask == mask_index)  # Convert to grayscale by taking one channel
+            (gray_bf_y, gray_bf_x) = np.nonzero(gray_bf)
+            gray_bf_xy             = np.concatenate([gray_bf_x.reshape(-1,1), gray_bf_y.reshape(-1,1)], axis=1)  
+            ref_xy                 = np.concatenate([np.array(pixel_x).reshape(-1,1), np.array(pixel_y).reshape(-1,1)], axis=1) 
+            distances              = euclidean_distances(gray_bf_xy, ref_xy)  
+            closest_point          = ref_xy[distances.argmin(axis=1)[0]]
+
+            manually_chosen_ = np.argsort(np.mean(distances, axis=0))[:2]
+
+            gjcenter_index = manually_chosen_[0].item()
+
+            if manually_chosen_[0] not in gjcenter_index_list:
+                gjcenter_index_list.append(gjcenter_index) 
+
+            elif gjcenter_index in gjcenter_index_list:
+                gjcenter_index = manually_chosen_[1].item()
+                gjcenter_index_list.append(gjcenter_index)
+
+            elif gjcenter_index in gjcenter_index_list:
+                gjcenter_index = manually_chosen_[2].item()
+                gjcenter_index_list.append(gjcenter_index) 
+
+            self.mapping_gjcenter_id_to_mask_id[gjcenter_index] = mask_index
+            self.mapping_mask_id_to_gjcenter_id[mask_index] = gjcenter_index
+
+    def show_mask_order(self, center_geojson_file, crs_dst="EPSG:4326", figsize=(20, 15), fontsize=14, alpha=0.5, satellite_image=None):
+        self.mapping_geojson_center_to_mask_id(center_geojson_file, crs_dst=crs_dst)
+
+        fig, axs = plt.subplots(1, 1, figsize=figsize) 
+        if satellite_image is not None:
+            axs.imshow(satellite_image.transpose(1,2,0))
+        axs.imshow(self.mask.astype(np.uint8), cmap='turbo', alpha=alpha)
+        axs.scatter(self.center_pixel_x, self.center_pixel_y, c='cyan', s=10)
+
+        for geojson_center_id, (x, y) in enumerate(zip(self.center_pixel_x, self.center_pixel_y)):
+            # Place the text at the coordinates (x[i], y[i])
+            # The 'xytext' argument can be used to offset the text from the point
+            plt.annotate(text=geojson_center_id, xy=(x, y), xytext=(5, 5), fontsize=fontsize, textcoords='offset points')
+            
+    def get_a_binary_mask(self, geojson_center_id):
+        mask_id = self.mapping_gjcenter_id_to_mask_id[geojson_center_id]
+        gray_bf = 1*(self.mask == mask_id) 
+        return gray_bf
+    
+    def update_a_binary_mask(self, new_mask, geojson_center_id):
+        mask_2D = self.mask.copy()
+        mask_id = self.mapping_gjcenter_id_to_mask_id[geojson_center_id]
+        mask_2D[mask_2D == mask_id]  = mask_id*new_mask[mask_2D == mask_id]  
+
+        mask_2D   = mask_2D.reshape(1, mask_2D.shape[0], mask_2D.shape[1])
+        self.mask = mask_2D
+        return mask_2D
