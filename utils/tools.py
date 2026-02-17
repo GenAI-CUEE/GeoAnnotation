@@ -81,6 +81,13 @@ def get_raster_data(file_path):
 
     return image, datainfo
 
+def get_longlat_from_image_pixels(y, x, datainfo, crs_dst="EPSG:4326"):
+    long, lat = datainfo.xy(y, x) 
+    if not(datainfo.crs.to_string() == crs_dst): 
+        transformer = Transformer.from_crs(datainfo.crs, crs_dst, always_xy=True)
+        long, lat = transformer.transform(long, lat)
+
+    return long, lat
 
 def get_raster_profile(meta_source_tif): 
     ''' 
