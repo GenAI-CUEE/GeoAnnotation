@@ -12,6 +12,7 @@ from pyproj import Transformer
 from torchvision.ops import masks_to_boxes 
 from shapely.geometry import box
 from sklearn.metrics.pairwise import euclidean_distances
+from skimage import exposure
 
 import cv2
 
@@ -88,6 +89,30 @@ def get_longlat_from_image_pixels(y, x, datainfo, crs_dst="EPSG:4326"):
         long, lat = transformer.transform(long, lat)
 
     return long, lat
+
+def image_enhancement(raster, max_pixel_value=255):
+    normalized_img = cv2.normalize(raster, None, 0, max_pixel_value, cv2.NORM_MINMAX)  # Normalize to 0-1 range
+    normalized_img_uint8 = normalized_img.astype(np.uint8)  
+
+    red_channel = normalized_img_uint8[:, :, 0].ravel()
+    green_channel = normalized_img_uint8[:, :, 1].ravel()
+    blue_channel = normalized_img_uint8[:, :, 2].ravel()
+
+    p2, p98 = np.percentile(red_channel, (2, 98))
+    red_ch_rescale = exposure.rescale_intensity(red_channel, in_range=(p2, p98))
+
+    p2, p98 = np.percentile(green_channel, (2, 98))
+    green_ch_rescale = exposure.rescale_intensity(green_channel, in_range=(p2, p98))
+
+    p2, p98 = np.percentile(blue_channel, (2, 98))
+    blue_ch_rescale = exposure.rescale_intensity(blue_channel, in_range=(p2, p98))
+
+    normalized_img_uint8[:,:,0] = red_ch_rescale.reshape(normalized_img_uint8.shape[0], normalized_img_uint8.shape[1])
+    normalized_img_uint8[:,:,1] = green_ch_rescale.reshape(normalized_img_uint8.shape[0], normalized_img_uint8.shape[1])
+    normalized_img_uint8[:,:,2] = blue_ch_rescale.reshape(normalized_img_uint8.shape[0], normalized_img_uint8.shape[1])
+
+    return normalized_img_uint8
+
 
 def get_raster_profile(meta_source_tif): 
     ''' 
