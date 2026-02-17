@@ -4,3 +4,4 @@ __pycache__/*
 .fuse*
 */.fuse**
 */**.gpkg
+theos/*.tif
