@@ -236,7 +236,7 @@ class Mask_profile:
         self.mapping_mask_id_to_gjcenter_id = {}
 
         gjcenter_index_list = []
-        for mask_index in range(0, self.mask.max()+1): 
+        for mask_index in range(1, self.mask.max()+1): 
             gray_bf                = 1*(self.mask == mask_index)  # Convert to grayscale by taking one channel
             (gray_bf_y, gray_bf_x) = np.nonzero(gray_bf)
             gray_bf_xy             = np.concatenate([gray_bf_x.reshape(-1,1), gray_bf_y.reshape(-1,1)], axis=1)  
@@ -289,7 +289,7 @@ class Mask_profile:
         mask_id = self.mapping_gjcenter_id_to_mask_id[geojson_center_id]
         mask_2D[mask_2D == mask_id]  = mask_id*new_mask[mask_2D == mask_id]  
 
-        mask_2D   = mask_2D.reshape(1, mask_2D.shape[0], mask_2D.shape[1])
+        #mask_2D   = mask_2D.reshape(1, mask_2D.shape[0], mask_2D.shape[1])
         self.mask = mask_2D
 
         
