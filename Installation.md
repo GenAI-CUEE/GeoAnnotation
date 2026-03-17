@@ -69,5 +69,6 @@ user@~/workspace/geo$ pixi add segment-geospatial[samgeo2] --pypi
 user@~/workspace/geo$ pixi add sam2 --pypi
 user@~/workspace/geo$ pixi add fiona --pypi
 user@~/workspace/geo$ pixi add plantcv --pypi  
+user@~/workspace/geo$ pixi add "altair==5.*" plantcv --pypi  
 ```
  
