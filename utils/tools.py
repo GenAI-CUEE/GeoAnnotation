@@ -13,7 +13,8 @@ from torchvision.ops import masks_to_boxes
 from shapely.geometry import box
 from sklearn.metrics.pairwise import euclidean_distances
 from skimage import exposure
-
+from pyproj import Transformer
+import csv
 import cv2
 
 ASSETS_DIRECTORY = "assets"
@@ -191,4 +192,45 @@ def save_raster_and_write_meta(data:np.array , destination_path: str, meta_sourc
 
     print(f"Modified image saved to : {destination_path}")
 
- 
+
+
+def setup_polygon(long_start, lat_start, long_end, lat_end, crs_source="EPSG:4326", crs_target="EPSG:32647"): 
+    bbox = [long_start, lat_start, long_end, lat_end] 
+    coordinates = [
+        [bbox[0], bbox[3]],  # Top-left corner (min_lon, max_lat)
+        [bbox[2], bbox[3]],  # Top-right corner (max_lon, max_lat)
+        [bbox[2], bbox[1]],  # Bottom-right corner (max_lon, min_lat)
+        [bbox[0], bbox[1]],  # Bottom-left corner (min_lon, min_lat)
+        [bbox[0], bbox[3]]   # Closing the polygon by repeating the first point
+        ]
+
+    transformer = Transformer.from_crs(crs_source, crs_target, always_xy=True)
+    poly_gons = []
+    for coord in coordinates: 
+        easting, northing = transformer.transform(coord[0], coord[1])
+        poly_gons.append([easting, northing])
+
+    return poly_gons, bbox, coordinates
+
+def save_stats(stats, path_npz, path_csv):
+    np.savez(path_npz, **stats)
+
+    with open(path_csv, 'w', newline='') as file:
+        writer = csv.writer(file)
+        # Write header
+        writer.writerow(['Key', 'Value'])
+        # Write data line by line
+        for key, value in stats.items():
+            writer.writerow([key, value])
+            
+def read_npz(npz_filename):
+    read_stats = dict(np.load(npz_filename))
+
+    read_dict = {}
+    for key, value in read_stats.items():
+        try:
+            read_dict[key] = value.item() 
+        except:
+            read_dict[key] = value
+
+    return read_dict 
