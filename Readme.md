@@ -14,3 +14,4 @@ We will go over the following topics:
 - [Tutorial 6 split and merge map](Tutorial_6_split_and_merge_map.ipynb)
 - [Tutorial 7 Merge sliced pics](Tutorial_7_Merge_sliced_pics.ipynb)
 - [Tutorial 8 trained model](Tutorial_8_trained_model.ipynb)
+<img width="3023" height="4535" alt="capstone poster" src="https://github.com/user-attachments/assets/6f2bccd5-d4ee-4d42-87c1-e572443d41e3" />
