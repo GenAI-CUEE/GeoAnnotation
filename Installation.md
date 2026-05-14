@@ -1,5 +1,12 @@
 ## Installation
 
+We recommend create two environments: one for making ground truth mask; another for training a deep learning model. 
+
+
+### Ground truth mask environment
+
+When making ground truth mask, we use SamGeo to perform building segmentation. Here, we initialize a pixi environment called geo and use it to collect all the required packages for running SamGeo.  
+
 1. Install pixi in the user directory
 
 ```
@@ -70,4 +77,16 @@ user@~/workspace/geo$ pixi add sam2 --pypi
 user@~/workspace/geo$ pixi add fiona --pypi
 user@~/workspace/geo$ pixi add plantcv --pypi  
 ```
- 
+
+### Deep learning environment 
+
+When training a model, we use a generic conda environment to install Pytorch package. One can define a new environment as follows;
+```
+conda create -n DLModel
+conda activate DLModel
+```
+
+Then, install the following packages:
+```
+conda install pytorch torchvision pytorch-cuda=12.1 -c pytorch -c nvidia
+```

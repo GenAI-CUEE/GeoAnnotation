@@ -49,6 +49,37 @@ We will go over the following topics for data processing and training a new deep
 <img src="figs/capstone poster.png" alt="Logo" width="500">
 
 
+### Folder organization
+
+```
+DL_modules/
+    -> models.py  
+    # contains a DL-model that is U-Net for making the binary mask
+DL_utils/
+    -> dataset.py 
+    # contains data preprocessing for training a model.
+    -> utils.py   
+    # contains early stopper used in finding the most appropriate epoch
+utils/
+    -> interactive_tools.py 
+    # contains tool for annotating points for finding correspondences. 
+    -> mask_tools.py 
+    # Read and process the building mask (in GeoTiff format); should contain important tools for processing binary mask.
+    -> raster_tools.py 
+    # Read and process Satellite images (in GeoTiff format); should contain important tools for processing satellite images.
+    -> tools.py 
+    # Read and process any GeoTiff file.
+```
+
+Data folder
+``` 
+Total/ # รวบรวมผลของการทำ segmentation ของทุกคน ด้วยกัน
+raw_data/ # รวบรวมผลของการนำ folder Total/ remove file ที่ไม่ได้ใช้ต่ออก เช่น พวก top left top right ออก
+Sorted_Data/ # รวบรวมผลของการดึง เฉพาะ mask กับ ภาพ แล้วเปลี่ยนชื่อ
+Result/  # รวบรวมผลของการ partition ให้เป็น 16x16
+```
+
+
 ## Contributors
 
 1. Phoomipas Chobchuphol
@@ -56,3 +87,4 @@ We will go over the following topics for data processing and training a new deep
 3. Kan Namprohm
 4. Nonthapat Mahapromrak
 5. Thanut Vachirabenjapong
+
